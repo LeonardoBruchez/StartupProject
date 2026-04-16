@@ -1,11 +1,15 @@
 import React, { useState, useRef } from 'react';
-import { Upload, FileText, Zap, Brain, Download, Loader2, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Upload, Zap, Brain, Download, Loader2, Sparkles, CheckCircle2 } from 'lucide-react';
 import './index.css';
 
 function App() {
   const [file, setFile] = useState(null);
-  const [mode, setMode] = useState('quick');
+  const [studyType, setStudyType] = useState('summary');
+  const [summaryMode, setSummaryMode] = useState('quick');
+  const [questionMode, setQuestionMode] = useState('practice');
+  const [questionCount, setQuestionCount] = useState(10);
   const [difficulty, setDifficulty] = useState('intermediate');
+  const [additionalInfo, setAdditionalInfo] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [result, setResult] = useState(null);
   const fileInputRef = useRef(null);
@@ -19,33 +23,45 @@ function App() {
     }
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!file) return;
 
     setIsGenerating(true);
     setResult(null);
 
-    // Simulação do processamento da IA
-    setTimeout(() => {
-      setIsGenerating(false);
-      setResult({
-        title: `Resumo: ${file.name.replace('.pdf', '')}`,
-        content: `Este é um exemplo de como o resumo aparecerá. 
-        \n\nNível: ${difficulty.toUpperCase()} | Modo: ${mode === 'quick' ? 'RÁPIDO' : 'APROFUNDADO'}
-        \n\nPrincipais Pontos:
-        1. Resumo estruturado do conteúdo acadêmico.
-        2. Principais conceitos e definições chaves.
-        3. Fórmulas ou metodologias importantes identificadas no texto.
-        4. Conclusões e insights derivados do plano de aula.
-        \n\nA IA do EduSpark analisou seu arquivo e formatou estas informações para facilitar seu estudo.`,
-        timestamp: new Date().toLocaleString()
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('studyType', studyType);
+      formData.append('summaryMode', summaryMode);
+      formData.append('questionMode', questionMode);
+      formData.append('questionCount', String(questionCount));
+      formData.append('difficulty', difficulty);
+      formData.append('additionalInfo', additionalInfo.trim());
+
+      const response = await fetch('/api/study-material', {
+        method: 'POST',
+        body: formData
       });
-    }, 3000);
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error || 'Falha ao gerar material de estudo.');
+      }
+
+      setResult(payload);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Erro inesperado na geracao do material.';
+      alert(message);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const reset = () => {
     setFile(null);
     setResult(null);
+    setAdditionalInfo('');
   };
 
   return (
@@ -88,22 +104,77 @@ function App() {
 
             <div className="controls">
               <div className="control-group">
-                <label>Modo de Resumo</label>
+                <label>Formato de Estudo</label>
                 <div className="radio-group">
                   <button
-                    className={`option-btn ${mode === 'quick' ? 'selected' : ''}`}
-                    onClick={() => setMode('quick')}
+                    className={`option-btn ${studyType === 'summary' ? 'selected' : ''}`}
+                    onClick={() => setStudyType('summary')}
                   >
-                    <Zap size={16} style={{ marginBottom: '4px' }} /><br />Rápido
+                    <Zap size={16} style={{ marginBottom: '4px' }} /><br />Resumo
                   </button>
                   <button
-                    className={`option-btn ${mode === 'deep' ? 'selected' : ''}`}
-                    onClick={() => setMode('deep')}
+                    className={`option-btn ${studyType === 'questions' ? 'selected' : ''}`}
+                    onClick={() => setStudyType('questions')}
                   >
-                    <Brain size={16} style={{ marginBottom: '4px' }} /><br />Profundo
+                    <Brain size={16} style={{ marginBottom: '4px' }} /><br />Perguntas
                   </button>
                 </div>
               </div>
+
+              {studyType === 'summary' ? (
+                <div className="control-group">
+                  <label>Modo de Resumo</label>
+                  <div className="radio-group">
+                    <button
+                      className={`option-btn ${summaryMode === 'quick' ? 'selected' : ''}`}
+                      onClick={() => setSummaryMode('quick')}
+                    >
+                      Rapido
+                    </button>
+                    <button
+                      className={`option-btn ${summaryMode === 'deep' ? 'selected' : ''}`}
+                      onClick={() => setSummaryMode('deep')}
+                    >
+                      Profundo
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="control-group">
+                    <label>Tipo de Questao</label>
+                    <div className="radio-group">
+                      <button
+                        className={`option-btn ${questionMode === 'practice' ? 'selected' : ''}`}
+                        onClick={() => setQuestionMode('practice')}
+                      >
+                        Treino
+                      </button>
+                      <button
+                        className={`option-btn ${questionMode === 'simulation' ? 'selected' : ''}`}
+                        onClick={() => setQuestionMode('simulation')}
+                      >
+                        Simulado
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="control-group">
+                    <label>Quantidade de Questoes</label>
+                    <div className="radio-group">
+                      {[5, 10, 15].map((count) => (
+                        <button
+                          key={count}
+                          className={`option-btn ${questionCount === count ? 'selected' : ''}`}
+                          onClick={() => setQuestionCount(count)}
+                        >
+                          {count}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div className="control-group">
                 <label>Nível de Dificuldade</label>
@@ -130,6 +201,18 @@ function App() {
               </div>
             </div>
 
+            <div className="additional-info-group">
+              <label htmlFor="additional-info">Informacoes adicionais (opcional)</label>
+              <textarea
+                id="additional-info"
+                className="additional-info-input"
+                value={additionalInfo}
+                onChange={(e) => setAdditionalInfo(e.target.value)}
+                placeholder="Ex.: foco nos topicos 2 e 4, prova da banca X, priorizar questoes com calculo, evitar questoes discursivas..."
+                rows={4}
+              />
+            </div>
+
             <button
               className="generate-btn"
               disabled={!file || isGenerating}
@@ -141,7 +224,7 @@ function App() {
                 </>
               ) : (
                 <>
-                  <Sparkles size={20} /> Gerar Material de Estudo
+                  <Sparkles size={20} /> {studyType === 'summary' ? 'Gerar Resumo' : 'Gerar Perguntas'}
                 </>
               )}
             </button>
@@ -160,7 +243,45 @@ function App() {
               </div>
             </div>
             <div className="content-preview">
-              <p style={{ whiteSpace: 'pre-wrap' }}>{result.content}</p>
+              {result.type === 'summary' ? (
+                <p style={{ whiteSpace: 'pre-wrap' }}>{result.content}</p>
+              ) : (
+                <>
+                  {result.additionalInfo && (
+                    <p className="questions-extra-info">Contexto adicional: {result.additionalInfo}</p>
+                  )}
+                  <p className="questions-meta">
+                    Modo: {result.mode} | Dificuldade: {result.difficulty} | Total: {result.questions.length} questoes
+                  </p>
+
+                  <ol className="questions-list">
+                    {result.questions.map((question) => (
+                      <li key={question.id} className="question-card">
+                        <p className="question-statement">{question.statement}</p>
+                        <ul className="question-options">
+                          {question.options.map((option, index) => (
+                            <li key={option}>{String.fromCharCode(65 + index)}. {option}</li>
+                          ))}
+                        </ul>
+                        {result.questionMode === 'practice' && (
+                          <p className="question-answer">
+                            Resposta: {question.answer} | {question.explanation}
+                          </p>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+
+                  {result.questionMode === 'simulation' && (
+                    <div className="answer-key">
+                      <h3>Gabarito</h3>
+                      <p>
+                        {result.questions.map((question) => `${question.id}) ${question.answer}`).join(' | ')}
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
             <p style={{ marginTop: '1.5rem', fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center' }}>
               Gerado em {result.timestamp} • EduSpark AI

@@ -1,18 +1,75 @@
+# EduSpark
+
 ### Plataforma em desenvolvimento
 
-# React + Vite
+Aplicacao para gerar material de estudo a partir de PDF:
+- Resumo (rapido/profundo)
+- Perguntas (treino/simulado)
+- Campo de informacoes adicionais para orientar a IA
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Tecnologias
 
-Currently, two official plugins are available:
+- Frontend: React + Vite
+- Backend: Express
+- Upload de PDF: Multer
+- Extracao de texto: pdf-parse
+- IA: OpenAI API (com fallback mock sem chave)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 1. Configurar variaveis de ambiente
 
-## React Compiler
+1. Copie [ .env.example ] para um arquivo chamado `.env` na raiz.
+2. Preencha sua chave:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```env
+OPENAI_API_KEY=sua_chave_real
+OPENAI_MODEL=gpt-4o-mini
+PORT=8787
+```
 
-## Expanding the ESLint configuration
+Se `OPENAI_API_KEY` nao for informada, o backend responde com modo mock (para voce testar o fluxo sem custo).
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 2. Instalar dependencias
+
+```bash
+npm install
+```
+
+## 3. Rodar frontend + backend juntos
+
+```bash
+npm run dev
+```
+
+Isso sobe:
+- Vite (frontend)
+- API em `http://localhost:8787`
+
+## 4. Fluxo de uso
+
+1. Envie um PDF.
+2. Escolha formato de estudo: resumo ou perguntas.
+3. Ajuste dificuldade e opcoes de modo.
+4. Preencha informacoes adicionais (opcional).
+5. Clique em gerar.
+
+## Endpoints da API
+
+- `GET /api/health`
+	- Retorna status e se existe chave configurada.
+
+- `POST /api/study-material`
+	- `multipart/form-data`
+	- Campos esperados:
+		- `file` (PDF)
+		- `studyType` (`summary` ou `questions`)
+		- `summaryMode` (`quick` ou `deep`)
+		- `questionMode` (`practice` ou `simulation`)
+		- `questionCount` (numero)
+		- `difficulty` (`beginner`, `intermediate`, `expert`)
+		- `additionalInfo` (texto opcional)
+
+## Observacoes importantes
+
+- A chave da IA fica apenas no backend.
+- O frontend chama `\/api\/study-material` e o Vite faz proxy para a API local.
+- PDFs escaneados (imagem) podem precisar de OCR para melhorar a extracao.
