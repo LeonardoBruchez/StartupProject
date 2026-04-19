@@ -2,6 +2,11 @@ import React, { useState, useRef } from 'react';
 import { Upload, Zap, Brain, Download, Loader2, Sparkles, CheckCircle2 } from 'lucide-react';
 import './index.css';
 
+function normalizeOptionText(option) {
+  const raw = String(option || '').trim();
+  return raw.replace(/^(?:[A-Za-z]\s*[\.)\-:]\s*)+/, '').trim();
+}
+
 function App() {
   const [file, setFile] = useState(null);
   const [studyType, setStudyType] = useState('summary');
@@ -12,6 +17,7 @@ function App() {
   const [additionalInfo, setAdditionalInfo] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [result, setResult] = useState(null);
+  const [showAnswers, setShowAnswers] = useState(false);
   const fileInputRef = useRef(null);
 
   const handleFileChange = (e) => {
@@ -28,6 +34,7 @@ function App() {
 
     setIsGenerating(true);
     setResult(null);
+    setShowAnswers(false);
 
     try {
       const formData = new FormData();
@@ -62,6 +69,7 @@ function App() {
     setFile(null);
     setResult(null);
     setAdditionalInfo('');
+    setShowAnswers(false);
   };
 
   return (
@@ -234,6 +242,15 @@ function App() {
             <div className="result-header">
               <h2>{result.title}</h2>
               <div style={{ display: 'flex', gap: '1rem' }}>
+                  {result.type === 'questions' && (
+                    <button
+                      className="download-btn"
+                      style={{ background: showAnswers ? 'var(--secondary)' : 'rgba(255, 255, 255, 0.1)' }}
+                      onClick={() => setShowAnswers((prev) => !prev)}
+                    >
+                      {showAnswers ? 'Ocultar Respostas' : 'Mostrar Respostas'}
+                    </button>
+                  )}
                 <button className="download-btn" onClick={() => window.print()}>
                   <Download size={18} /> Baixar PDF
                 </button>
@@ -260,10 +277,10 @@ function App() {
                         <p className="question-statement">{question.statement}</p>
                         <ul className="question-options">
                           {question.options.map((option, index) => (
-                            <li key={option}>{String.fromCharCode(65 + index)}. {option}</li>
+                            <li key={option}>{String.fromCharCode(65 + index)}. {normalizeOptionText(option)}</li>
                           ))}
                         </ul>
-                        {result.questionMode === 'practice' && (
+                        {showAnswers && result.questionMode === 'practice' && (
                           <p className="question-answer">
                             Resposta: {question.answer} | {question.explanation}
                           </p>
@@ -272,7 +289,7 @@ function App() {
                     ))}
                   </ol>
 
-                  {result.questionMode === 'simulation' && (
+                  {showAnswers && (
                     <div className="answer-key">
                       <h3>Gabarito</h3>
                       <p>
@@ -280,6 +297,18 @@ function App() {
                       </p>
                     </div>
                   )}
+
+                  <div className="print-answer-page" aria-hidden="true">
+                    <h3>Gabarito - Respostas</h3>
+                    <ol className="print-answer-list">
+                      {result.questions.map((question) => (
+                        <li key={`print-answer-${question.id}`}>
+                          <strong>{question.id}) {question.answer}</strong>
+                          {question.explanation ? ` - ${question.explanation}` : ''}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
                 </>
               )}
             </div>
